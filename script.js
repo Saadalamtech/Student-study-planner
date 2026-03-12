@@ -890,29 +890,41 @@ function updateBloomFlower() {
 // ==============================
 function initNavigation() {
   function switchView(view) {
-    S.currentView=view;
-    // Show/hide view panels
-    document.querySelectorAll('.view-panel').forEach(p=>p.classList.remove('active'));
-    const panel=document.getElementById('view'+view.charAt(0).toUpperCase()+view.slice(1));
-    if(panel) panel.classList.add('active');
-    // Update topbar nav
-    document.querySelectorAll('.tnav-btn').forEach(b=>{
-      b.classList.toggle('active',b.dataset.view===view);
-    });
-    // Update bottom nav
-    document.querySelectorAll('.bnav-btn:not(.bnav-fab)').forEach(b=>{
-      b.classList.toggle('active',b.dataset.view===view);
-    });
-    // sidebar-nav removed
-    // Calendar nav: always opens the sidebar panel (left side)
+    // Calendar is special — it's the sidebar drawer, not a main panel view
     if (view === 'calendar') {
-      document.getElementById('calendarPanel')?.classList.add('sidebar-open');
-      document.getElementById('sidebarBackdrop')?.classList.add('visible');
-      document.getElementById('mobileMenuBtn')?.classList.add('open');
-      // Don't switch main view — calendar lives in sidebar
+      if (isSidebarOpen()) {
+        closeSidebar();
+        // Deactivate calendar button, restore previous view active state
+        document.querySelectorAll('.bnav-btn:not(.bnav-fab)').forEach(b=>{
+          b.classList.toggle('active', b.dataset.view === S.currentView);
+        });
+      } else {
+        openSidebarPanel();
+        // Mark calendar btn active, deactivate others
+        document.querySelectorAll('.bnav-btn:not(.bnav-fab)').forEach(b=>{
+          b.classList.toggle('active', b.dataset.view === 'calendar');
+        });
+      }
       return;
     }
-    // Switching to tasks/focus/stats: close sidebar on mobile
+
+    S.currentView = view;
+
+    // Show/hide view panels in main area
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('view' + view.charAt(0).toUpperCase() + view.slice(1));
+    if (panel) panel.classList.add('active');
+
+    // Update topbar nav pills
+    document.querySelectorAll('.tnav-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === view);
+    });
+    // Update bottom nav tabs
+    document.querySelectorAll('.bnav-btn:not(.bnav-fab)').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === view);
+    });
+
+    // Close sidebar on mobile when switching real views
     if (window.innerWidth <= 700) closeSidebar();
   }
 
@@ -930,26 +942,39 @@ function initNavigation() {
 // ==============================
 // MOBILE HAMBURGER
 // ==============================
+function isSidebarOpen() {
+  return document.getElementById('calendarPanel')?.classList.contains('sidebar-open') || false;
+}
 function closeSidebar() {
   document.getElementById('calendarPanel')?.classList.remove('sidebar-open');
   document.getElementById('sidebarBackdrop')?.classList.remove('visible');
-  document.getElementById('mobileMenuBtn')?.classList.remove('open');
-  document.body.style.overflow='';
+  document.body.style.overflow = '';
+  // Restore bottom nav active state to current real view
+  document.querySelectorAll('.bnav-btn:not(.bnav-fab)').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === S.currentView);
+  });
+}
+function openSidebarPanel() {
+  document.getElementById('calendarPanel')?.classList.add('sidebar-open');
+  document.getElementById('sidebarBackdrop')?.classList.add('visible');
+  // Don't lock body scroll — let sidebar scroll internally
 }
 function initMobileMenu() {
-  const btn=document.getElementById('mobileMenuBtn');
-  const backdrop=document.getElementById('sidebarBackdrop');
-  const sidebar=document.getElementById('calendarPanel');
-  if(!btn||!backdrop||!sidebar) return;
-  function openSidebar(){
-    sidebar.classList.add('sidebar-open');
-    backdrop.classList.add('visible');
-    btn.classList.add('open');
-    document.body.style.overflow='hidden';
-  }
-  btn.addEventListener('click',()=>btn.classList.contains('open')?closeSidebar():openSidebar());
-  backdrop.addEventListener('click',closeSidebar);
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSidebar();});
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const closeBtn = document.getElementById('sidebarCloseBtn');
+
+  // Close button inside sidebar
+  closeBtn?.addEventListener('click', closeSidebar);
+
+  // Backdrop tap closes sidebar
+  backdrop?.addEventListener('click', (e) => {
+    if (e.target === backdrop) closeSidebar();
+  });
+
+  // Escape key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeSidebar();
+  });
 }
 
 // ==============================

@@ -60,10 +60,7 @@
     <div class="bloom-pct-label" id="bloomPctLabel">0%</div>
   </div>
 
-  <!-- Mobile Hamburger -->
-  <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle sidebar">
-    <span></span><span></span><span></span>
-  </button>
+  <!-- Sidebar backdrop -->
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <!-- ===== BOTTOM NAV (mobile & tablet) ===== -->
@@ -76,7 +73,7 @@
       <i class="fas fa-calendar-alt"></i>
       <span>Calendar</span>
     </button>
-    <button class="bnav-btn bnav-fab" id="navFab" title="Add Task">
+    <button class="bnav-btn bnav-fab" id="navFab" title="Add Task" aria-label="Add Task">
       <i class="fas fa-plus"></i>
     </button>
     <button class="bnav-btn" data-view="pomodoro" title="Focus">
@@ -94,6 +91,11 @@
     <!-- ===== LEFT: CALENDAR PANEL ===== -->
     <aside class="panel panel--calendar" id="calendarPanel">
       <div class="panel-inner">
+
+        <!-- Close button (mobile only) -->
+        <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close sidebar">
+          <i class="fas fa-times"></i>
+        </button>
 
         <!-- Greeting -->
         <div class="greeting-block">
