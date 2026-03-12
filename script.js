@@ -97,9 +97,17 @@ function toast(msg, icon='🌸') {
 // ==============================
 function initCanvas() {
   const cv = document.getElementById('ambientCanvas');
+  if (!cv) return;
   const ctx = cv.getContext('2d');
-  function resize() { cv.width=window.innerWidth; cv.height=window.innerHeight; }
-  resize();
+  // Force pixel dimensions immediately — critical for GitHub Pages / static hosting
+  cv.width = window.innerWidth || document.documentElement.clientWidth || 1280;
+  cv.height = window.innerHeight || document.documentElement.clientHeight || 800;
+  cv.style.width = '100%';
+  cv.style.height = '100%';
+  function resize() {
+    cv.width = window.innerWidth;
+    cv.height = window.innerHeight;
+  }
   window.addEventListener('resize', resize);
 
   // Large slow aurora layers
@@ -855,6 +863,7 @@ function initTheme() {
 }
 function applyTheme() {
   document.body.classList.toggle('dark',S.darkMode);
+  document.documentElement.classList.toggle('dark-html',S.darkMode);
   const icon=document.querySelector('#themeBtn i');
   if(icon) icon.className=S.darkMode?'fas fa-sun':'fas fa-moon';
 }
@@ -894,22 +903,17 @@ function initNavigation() {
     document.querySelectorAll('.bnav-btn:not(.bnav-fab)').forEach(b=>{
       b.classList.toggle('active',b.dataset.view===view);
     });
-    // Update sidebar nav
-    document.querySelectorAll('.snav-btn').forEach(b=>{
-      b.classList.toggle('active',b.dataset.snav===view);
-    });
-    // On mobile: for calendar/pomodoro/stats show sidebar or main view
-    if(window.innerWidth<=700 && (view==='calendar'||view==='pomodoro'||view==='stats')) {
-      if(view==='calendar') {
-        // open sidebar
-        document.getElementById('calendarPanel')?.classList.add('sidebar-open');
-        document.getElementById('sidebarBackdrop')?.classList.add('visible');
-        document.getElementById('mobileMenuBtn')?.classList.add('open');
-      }
+    // sidebar-nav removed
+    // Calendar nav: always opens the sidebar panel (left side)
+    if (view === 'calendar') {
+      document.getElementById('calendarPanel')?.classList.add('sidebar-open');
+      document.getElementById('sidebarBackdrop')?.classList.add('visible');
+      document.getElementById('mobileMenuBtn')?.classList.add('open');
+      // Don't switch main view — calendar lives in sidebar
+      return;
     }
-    if(window.innerWidth<=700 && view==='tasks') {
-      closeSidebar();
-    }
+    // Switching to tasks/focus/stats: close sidebar on mobile
+    if (window.innerWidth <= 700) closeSidebar();
   }
 
   // Topbar nav
@@ -920,13 +924,7 @@ function initNavigation() {
   document.querySelectorAll('.bnav-btn:not(.bnav-fab)').forEach(btn=>{
     btn.addEventListener('click',()=>switchView(btn.dataset.view));
   });
-  // Sidebar nav
-  document.querySelectorAll('.snav-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      switchView(btn.dataset.snav);
-      if(window.innerWidth<=700) closeSidebar();
-    });
-  });
+  // sidebar-nav removed
 }
 
 // ==============================
