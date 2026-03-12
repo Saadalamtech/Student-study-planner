@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bloom — Your Study Sanctuary</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&family=Dancing+Script:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+
+  <!-- Custom Cursor -->
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-trail" id="cursorTrail"></div>
+  <div class="cursor-petal" id="cursorPetal">
+    <svg viewBox="0 0 40 40" fill="none">
+      <ellipse cx="20" cy="20" rx="8" ry="16" fill="#f9a8d4" opacity="0.8" transform="rotate(0 20 20)"/>
+      <ellipse cx="20" cy="20" rx="8" ry="16" fill="#fbcfe8" opacity="0.7" transform="rotate(60 20 20)"/>
+      <ellipse cx="20" cy="20" rx="8" ry="16" fill="#fce7f3" opacity="0.6" transform="rotate(120 20 20)"/>
+      <circle cx="20" cy="20" r="4" fill="#f472b6"/>
+    </svg>
+  </div>
+
+  <!-- Fluid animated background canvas -->
+  <canvas id="ambientCanvas"></canvas>
+  <div class="petals-layer" id="petalsLayer"></div>
+
+  <!-- Bloom Flower (progress flower — bottom right, partially hidden) -->
+  <div class="bloom-flower-wrap" id="bloomFlowerWrap">
+    <svg class="bloom-flower-svg" id="bloomFlowerSvg" viewBox="0 0 200 200" fill="none">
+      <defs>
+        <radialGradient id="petalG1" cx="50%" cy="30%" r="60%">
+          <stop offset="0%" stop-color="#fce7f3"/>
+          <stop offset="100%" stop-color="#f9a8d4"/>
+        </radialGradient>
+        <radialGradient id="petalG2" cx="50%" cy="30%" r="60%">
+          <stop offset="0%" stop-color="#fda4af"/>
+          <stop offset="100%" stop-color="#fb7185"/>
+        </radialGradient>
+        <radialGradient id="centerG" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#fde68a"/>
+          <stop offset="100%" stop-color="#f59e0b"/>
+        </radialGradient>
+      </defs>
+      <g id="petalGroup" transform="translate(100,100)">
+        <!-- 8 petals, closed by default, open via JS/CSS -->
+        <ellipse class="bloom-petal" data-i="0"  rx="14" ry="52" fill="url(#petalG1)" transform="rotate(0)   translate(0,-10)"/>
+        <ellipse class="bloom-petal" data-i="1"  rx="14" ry="52" fill="url(#petalG2)" transform="rotate(45)  translate(0,-10)"/>
+        <ellipse class="bloom-petal" data-i="2"  rx="14" ry="52" fill="url(#petalG1)" transform="rotate(90)  translate(0,-10)"/>
+        <ellipse class="bloom-petal" data-i="3"  rx="14" ry="52" fill="url(#petalG2)" transform="rotate(135) translate(0,-10)"/>
+        <ellipse class="bloom-petal" data-i="4"  rx="14" ry="52" fill="url(#petalG1)" transform="rotate(180) translate(0,-10)"/>
+        <ellipse class="bloom-petal" data-i="5"  rx="14" ry="52" fill="url(#petalG2)" transform="rotate(225) translate(0,-10)"/>
+        <ellipse class="bloom-petal" data-i="6"  rx="14" ry="52" fill="url(#petalG1)" transform="rotate(270) translate(0,-10)"/>
+        <ellipse class="bloom-petal" data-i="7"  rx="14" ry="52" fill="url(#petalG2)" transform="rotate(315) translate(0,-10)"/>
+        <circle class="bloom-center" r="22" fill="url(#centerG)"/>
+        <circle r="10" fill="#fef3c7" opacity="0.7"/>
+      </g>
+    </svg>
+    <div class="bloom-pct-label" id="bloomPctLabel">0%</div>
+  </div>
+
+  <!-- Mobile Hamburger -->
+  <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle sidebar">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <!-- ===== BOTTOM NAV (mobile & tablet) ===== -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="bnav-btn active" data-view="tasks" title="Tasks">
+      <i class="fas fa-seedling"></i>
+      <span>Tasks</span>
+    </button>
+    <button class="bnav-btn" data-view="calendar" title="Calendar">
+      <i class="fas fa-calendar-alt"></i>
+      <span>Calendar</span>
+    </button>
+    <button class="bnav-btn bnav-fab" id="navFab" title="Add Task">
+      <i class="fas fa-plus"></i>
+    </button>
+    <button class="bnav-btn" data-view="pomodoro" title="Focus">
+      <i class="fas fa-clock"></i>
+      <span>Focus</span>
+    </button>
+    <button class="bnav-btn" data-view="stats" title="Stats">
+      <i class="fas fa-chart-line"></i>
+      <span>Stats</span>
+    </button>
+  </nav>
+
+  <div class="app-shell" id="appShell">
+
+    <!-- ===== LEFT: CALENDAR PANEL ===== -->
+    <aside class="panel panel--calendar" id="calendarPanel">
+      <div class="panel-inner">
+
+        <!-- Greeting -->
+        <div class="greeting-block">
+          <div class="greeting-leaf">🌿</div>
+          <div class="greeting-text">
+            <span class="greeting-hello" id="greetingText">Hey There,</span>
+            <span class="greeting-date" id="greetingDate"></span>
+          </div>
+        </div>
+
+        <!-- Sidebar Nav links (desktop) -->
+        <nav class="sidebar-nav">
+          <button class="snav-btn active" data-snav="tasks"><i class="fas fa-seedling"></i> Tasks</button>
+          <button class="snav-btn" data-snav="calendar"><i class="fas fa-calendar-alt"></i> Calendar</button>
+          <button class="snav-btn" data-snav="pomodoro"><i class="fas fa-clock"></i> Focus Timer</button>
+          <button class="snav-btn" data-snav="stats"><i class="fas fa-chart-bar"></i> Stats</button>
+        </nav>
+
+        <!-- Mini Month Calendar -->
+        <div class="calendar-widget" id="sectionCalendar">
+          <div class="cal-nav-row">
+            <button class="cal-arrow" id="calPrev"><i class="fas fa-chevron-left"></i></button>
+            <div class="cal-month-label" id="calMonthLabel"></div>
+            <button class="cal-arrow" id="calNext"><i class="fas fa-chevron-right"></i></button>
+          </div>
+          <div class="cal-weekdays">
+            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+          </div>
+          <div class="cal-days" id="calDays"></div>
+        </div>
+
+        <!-- Selected Day Detail -->
+        <div class="selected-day-panel" id="selectedDayPanel">
+          <div class="selected-day-header">
+            <div class="selected-day-title" id="selectedDayTitle">Today</div>
+            <button class="add-event-btn" id="addEventBtn"><i class="fas fa-plus"></i></button>
+          </div>
+          <div class="day-events-list" id="dayEventsList">
+            <div class="day-empty">No tasks for this day</div>
+          </div>
+        </div>
+
+        <!-- Reminders -->
+        <div class="reminders-section">
+          <div class="section-label">
+            <span class="section-label-icon">🌸</span> Reminders
+            <button class="add-reminder-btn" id="addReminderBtn"><i class="fas fa-plus"></i></button>
+          </div>
+          <div class="reminders-list" id="remindersList">
+            <div class="day-empty">No reminders set</div>
+          </div>
+        </div>
+
+        <!-- Pomodoro Timer -->
+        <div class="pomo-widget" id="sectionPomodoro">
+          <div class="section-label"><span class="section-label-icon">🍃</span> Focus Timer</div>
+          <div class="pomo-modes-row">
+            <button class="pomo-chip active" data-time="1500" data-label="Focus">Focus</button>
+            <button class="pomo-chip" data-time="300" data-label="Short Break">Break</button>
+            <button class="pomo-chip" data-time="900" data-label="Long Break">Long</button>
+          </div>
+          <div class="pomo-ring-wrap">
+            <svg class="pomo-ring" viewBox="0 0 140 140">
+              <defs>
+                <linearGradient id="pomoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#f9a8d4"/>
+                  <stop offset="100%" stop-color="#fb7185"/>
+                </linearGradient>
+              </defs>
+              <circle class="pomo-track" cx="70" cy="70" r="58"/>
+              <circle class="pomo-prog" id="pomoCircle" cx="70" cy="70" r="58"
+                stroke-dasharray="364.4" stroke-dashoffset="0"/>
+            </svg>
+            <div class="pomo-center">
+              <div class="pomo-time" id="pomoTime">25:00</div>
+              <div class="pomo-mode-name" id="pomoModeName">Focus</div>
+            </div>
+          </div>
+          <div class="pomo-controls-row">
+            <button class="pomo-ctrl" id="pomoReset"><i class="fas fa-undo"></i></button>
+            <button class="pomo-ctrl pomo-ctrl--main" id="pomoToggle"><i class="fas fa-play" id="pomoIcon"></i></button>
+            <button class="pomo-ctrl" id="pomoSkip"><i class="fas fa-forward"></i></button>
+          </div>
+          <div class="pomo-session-info" id="pomoSessionInfo">Session 1 · <span id="pomoCount">0</span> done today</div>
+        </div>
+
+        <!-- Daily Quote -->
+        <div class="quote-widget">
+          <div class="quote-leaf">🌱</div>
+          <div class="quote-content">
+            <p class="quote-text" id="quoteText">"Almost everything will work again if you unplug it for a few minutes, including you."</p>
+            <span class="quote-by" id="quoteBy">— Anne Lamott</span>
+          </div>
+          <button class="quote-next" id="quoteNext">↻</button>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- ===== CENTER: TASK BOARD ===== -->
+    <main class="panel panel--main" id="mainPanel">
+      <div class="panel-inner">
+
+        <!-- Top Bar -->
+        <header class="topbar">
+          <div class="topbar-brand">
+            <svg class="brand-bloom" viewBox="0 0 28 28" fill="none">
+              <ellipse cx="14" cy="14" rx="5" ry="11" fill="#fda4af" opacity="0.7"/>
+              <ellipse cx="14" cy="14" rx="5" ry="11" fill="#f9a8d4" opacity="0.6" transform="rotate(60 14 14)"/>
+              <ellipse cx="14" cy="14" rx="5" ry="11" fill="#fbcfe8" opacity="0.5" transform="rotate(120 14 14)"/>
+              <circle cx="14" cy="14" r="3.5" fill="#f472b6"/>
+            </svg>
+            <span class="brand-name">bloom</span>
+          </div>
+
+          <!-- Desktop Nav -->
+          <nav class="topbar-nav" id="topbarNav">
+            <button class="tnav-btn active" data-view="tasks"><i class="fas fa-seedling"></i> Tasks</button>
+            <button class="tnav-btn" data-view="pomodoro"><i class="fas fa-clock"></i> Focus</button>
+            <button class="tnav-btn" data-view="stats"><i class="fas fa-chart-bar"></i> Stats</button>
+          </nav>
+
+          <div class="topbar-search">
+            <i class="fas fa-search topbar-search-icon"></i>
+            <input type="text" class="topbar-search-input" id="searchInput" placeholder="Search tasks…"/>
+          </div>
+          <div class="topbar-actions">
+            <div class="progress-pill" id="progressPill" title="Today's completion">
+              <div class="progress-pill-fill" id="progressPillFill"></div>
+              <span class="progress-pill-text" id="progressPillText">0%</span>
+            </div>
+            <button class="topbar-btn" id="themeBtn" title="Toggle theme"><i class="fas fa-moon"></i></button>
+          </div>
+        </header>
+
+        <!-- ===== VIEW: TASKS ===== -->
+        <div class="view-panel active" id="viewTasks">
+          <!-- Filter Tabs -->
+          <div class="filter-tabs" id="filterTabs">
+            <button class="filter-tab active" data-filter="all">All</button>
+            <button class="filter-tab" data-filter="today">Today</button>
+            <button class="filter-tab" data-filter="pending">Active</button>
+            <button class="filter-tab" data-filter="completed">Done</button>
+            <button class="filter-tab" data-filter="postponed">Deferred</button>
+            <button class="filter-tab" data-filter="overdue">Overdue</button>
+          </div>
+
+          <!-- Stats Row -->
+          <div class="stats-row" id="statsRow">
+            <div class="stat-card"><div class="stat-val" id="statTotal">0</div><div class="stat-lbl">Total</div></div>
+            <div class="stat-card"><div class="stat-val" id="statDone">0</div><div class="stat-lbl">Completed</div></div>
+            <div class="stat-card"><div class="stat-val" id="statStreak">0</div><div class="stat-lbl">Day Streak 🔥</div></div>
+            <div class="stat-card"><div class="stat-val" id="statPomos">0</div><div class="stat-lbl">Focus Sessions</div></div>
+          </div>
+
+          <!-- Sort Row -->
+          <div class="sort-row">
+            <div class="sort-label">Sort by</div>
+            <select class="sort-select" id="sortSelect">
+              <option value="created">Date Added</option>
+              <option value="due">Due Date</option>
+              <option value="priority">Priority</option>
+              <option value="subject">Subject</option>
+            </select>
+            <div class="subject-filters" id="subjectFilters"></div>
+            <div style="flex:1"></div>
+            <button class="clear-btn" id="clearDoneBtn"><i class="fas fa-broom"></i> Clear done</button>
+          </div>
+
+          <!-- Task Columns -->
+          <div class="task-columns-wrap">
+            <div class="task-columns" id="taskColumns">
+              <div class="task-col" id="col-urgent">
+                <div class="col-header"><div class="col-dot urgent-dot"></div><span class="col-title">Urgent</span><span class="col-count" id="cnt-urgent">0</span></div>
+                <div class="task-list" id="list-urgent" data-priority="urgent"></div>
+              </div>
+              <div class="task-col" id="col-high">
+                <div class="col-header"><div class="col-dot high-dot"></div><span class="col-title">High</span><span class="col-count" id="cnt-high">0</span></div>
+                <div class="task-list" id="list-high" data-priority="high"></div>
+              </div>
+              <div class="task-col" id="col-normal">
+                <div class="col-header"><div class="col-dot normal-dot"></div><span class="col-title">Medium</span><span class="col-count" id="cnt-normal">0</span></div>
+                <div class="task-list" id="list-normal" data-priority="normal"></div>
+              </div>
+              <div class="task-col" id="col-low">
+                <div class="col-header"><div class="col-dot low-dot"></div><span class="col-title">Low</span><span class="col-count" id="cnt-low">0</span></div>
+                <div class="task-list" id="list-low" data-priority="low"></div>
+              </div>
+            </div>
+            <div class="empty-state" id="emptyState">
+              <div class="empty-bloom">🌸</div>
+              <div class="empty-title">Your garden is empty</div>
+              <div class="empty-sub">Plant your first task and watch it bloom</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== VIEW: STATS ===== -->
+        <div class="view-panel" id="viewStats">
+          <div class="stats-view-inner">
+            <h2 class="stats-view-title"><i class="fas fa-chart-bar"></i> Your Progress</h2>
+            <div class="stats-grid">
+              <div class="stats-big-card">
+                <div class="sbig-val" id="sv-total">0</div>
+                <div class="sbig-lbl">Total Tasks</div>
+                <div class="sbig-icon">🌱</div>
+              </div>
+              <div class="stats-big-card accent">
+                <div class="sbig-val" id="sv-done">0</div>
+                <div class="sbig-lbl">Completed</div>
+                <div class="sbig-icon">🌸</div>
+              </div>
+              <div class="stats-big-card">
+                <div class="sbig-val" id="sv-streak">0</div>
+                <div class="sbig-lbl">Day Streak 🔥</div>
+                <div class="sbig-icon">✨</div>
+              </div>
+              <div class="stats-big-card accent">
+                <div class="sbig-val" id="sv-pomos">0</div>
+                <div class="sbig-lbl">Focus Sessions</div>
+                <div class="sbig-icon">🍃</div>
+              </div>
+            </div>
+
+            <div class="stats-completion-bar-wrap">
+              <div class="stats-completion-label">
+                <span>Today's Completion</span>
+                <span id="sv-pct">0%</span>
+              </div>
+              <div class="stats-completion-bar">
+                <div class="stats-completion-fill" id="sv-bar"></div>
+              </div>
+            </div>
+
+            <div class="stats-subjects-wrap">
+              <h3 class="stats-sub-title">Tasks by Subject</h3>
+              <div class="stats-subjects-list" id="svSubjectList"></div>
+            </div>
+
+            <div class="stats-priority-wrap">
+              <h3 class="stats-sub-title">Tasks by Priority</h3>
+              <div class="stats-priority-bars" id="svPriorityBars"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== VIEW: POMODORO (main panel mobile) ===== -->
+        <div class="view-panel" id="viewPomodoro">
+          <div class="pomo-view-inner">
+            <h2 class="stats-view-title"><i class="fas fa-clock"></i> Focus Timer</h2>
+            <div class="pomo-modes-row">
+              <button class="pomo-chip active pv-chip" data-pv-time="1500" data-pv-label="Focus">Focus</button>
+              <button class="pomo-chip pv-chip" data-pv-time="300" data-pv-label="Short Break">Break</button>
+              <button class="pomo-chip pv-chip" data-pv-time="900" data-pv-label="Long Break">Long</button>
+            </div>
+            <div class="pomo-ring-wrap pomo-ring-big">
+              <svg class="pomo-ring" viewBox="0 0 200 200">
+                <defs>
+                  <linearGradient id="pomoGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#f9a8d4"/>
+                    <stop offset="100%" stop-color="#fb7185"/>
+                  </linearGradient>
+                </defs>
+                <circle class="pomo-track" cx="100" cy="100" r="85"/>
+                <circle class="pomo-prog pomo-prog-big" id="pomoCircleBig" cx="100" cy="100" r="85"
+                  stroke-dasharray="534" stroke-dashoffset="0"/>
+              </svg>
+              <div class="pomo-center">
+                <div class="pomo-time pomo-time-big" id="pomoTimeBig">25:00</div>
+                <div class="pomo-mode-name" id="pomoModeNameBig">Focus</div>
+              </div>
+            </div>
+            <div class="pomo-controls-row">
+              <button class="pomo-ctrl" id="pomoResetBig"><i class="fas fa-undo"></i></button>
+              <button class="pomo-ctrl pomo-ctrl--main" id="pomoToggleBig"><i class="fas fa-play" id="pomoIconBig"></i></button>
+              <button class="pomo-ctrl" id="pomoSkipBig"><i class="fas fa-forward"></i></button>
+            </div>
+            <div class="pomo-session-info" id="pomoSessionInfoBig">Session 1 · <span id="pomoCountBig">0</span> done today</div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+  </div><!-- end app-shell -->
+
+  <!-- FAB Add Button (desktop) -->
+  <button class="fab" id="fabBtn" title="Add task (Ctrl+N)">
+    <svg class="fab-flower" viewBox="0 0 36 36" fill="none">
+      <ellipse cx="18" cy="18" rx="6" ry="12" fill="white" opacity="0.9" transform="rotate(0 18 18)"/>
+      <ellipse cx="18" cy="18" rx="6" ry="12" fill="white" opacity="0.8" transform="rotate(72 18 18)"/>
+      <ellipse cx="18" cy="18" rx="6" ry="12" fill="white" opacity="0.7" transform="rotate(144 18 18)"/>
+      <ellipse cx="18" cy="18" rx="6" ry="12" fill="white" opacity="0.8" transform="rotate(216 18 18)"/>
+      <ellipse cx="18" cy="18" rx="6" ry="12" fill="white" opacity="0.9" transform="rotate(288 18 18)"/>
+      <circle cx="18" cy="18" r="5" fill="white"/>
+    </svg>
+    <i class="fas fa-plus fab-plus"></i>
+  </button>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ===== TASK MODAL ===== -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal-card">
+      <button class="modal-close" id="taskModalClose"><i class="fas fa-times"></i></button>
+      <div class="modal-bloom-deco"></div>
+      <h2 class="modal-title" id="taskModalTitle">New Task</h2>
+      <div class="modal-form">
+        <div class="mf-row">
+          <div class="mf-field mf-full">
+            <label class="mf-label">Task Name</label>
+            <input type="text" class="mf-input" id="tTitle" placeholder="What needs to bloom today?"/>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field mf-full">
+            <label class="mf-label">Description</label>
+            <textarea class="mf-input mf-textarea" id="tDesc" placeholder="A few notes…"></textarea>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field">
+            <label class="mf-label">Subject</label>
+            <select class="mf-input" id="tSubject">
+              <option value="General">🌿 General</option>
+              <option value="Maths">📐 Maths</option>
+              <option value="Science">🔬 Science</option>
+              <option value="Literature">📖 Literature</option>
+              <option value="History">🏛️ History</option>
+              <option value="Art">🎨 Art</option>
+              <option value="Music">🎵 Music</option>
+              <option value="Languages">🌍 Languages</option>
+              <option value="Health">🌱 Health</option>
+            </select>
+          </div>
+          <div class="mf-field">
+            <label class="mf-label">Priority</label>
+            <select class="mf-input" id="tPriority">
+              <option value="urgent">🔴 Urgent</option>
+              <option value="high">🟠 High</option>
+              <option value="normal" selected>🟡 Medium</option>
+              <option value="low">🟢 Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field">
+            <label class="mf-label">Due Date</label>
+            <input type="date" class="mf-input" id="tDue"/>
+          </div>
+          <div class="mf-field">
+            <label class="mf-label">Due Time</label>
+            <input type="time" class="mf-input" id="tTime"/>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field">
+            <label class="mf-label">Duration</label>
+            <select class="mf-input" id="tDuration">
+              <option value="15">15 min</option>
+              <option value="30">30 min</option>
+              <option value="45">45 min</option>
+              <option value="60" selected>1 hour</option>
+              <option value="90">1.5 hrs</option>
+              <option value="120">2 hrs</option>
+              <option value="180">3 hrs</option>
+            </select>
+          </div>
+          <div class="mf-field">
+            <label class="mf-label">Pomodoros</label>
+            <input type="number" class="mf-input" id="tPomos" value="1" min="1" max="20"/>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field mf-full">
+            <label class="mf-label">Tags (comma separated)</label>
+            <input type="text" class="mf-input" id="tTags" placeholder="exam, chapter-4, review…"/>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field mf-full">
+            <label class="mf-label">Repeat</label>
+            <div class="repeat-row" id="repeatRow">
+              <button class="repeat-pill active" data-r="none">None</button>
+              <button class="repeat-pill" data-r="daily">Daily</button>
+              <button class="repeat-pill" data-r="weekly">Weekly</button>
+              <button class="repeat-pill" data-r="monthly">Monthly</button>
+            </div>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field mf-full">
+            <label class="mf-label">🔔 Reminder</label>
+            <div class="reminder-toggle-row">
+              <label class="toggle-wrap">
+                <input type="checkbox" id="tReminder" class="toggle-inp"/>
+                <span class="toggle-thumb"></span>
+                <span class="toggle-lbl">Enable reminder</span>
+              </label>
+            </div>
+            <div class="reminder-before-row" id="reminderBeforeRow">
+              <select class="mf-input" id="tReminderBefore">
+                <option value="15">15 min before</option>
+                <option value="30">30 min before</option>
+                <option value="60" selected>1 hr before</option>
+                <option value="1440">1 day before</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field mf-full">
+            <label class="mf-label">Steps</label>
+            <div class="subtask-add-row">
+              <input type="text" class="mf-input" id="subtaskInp" placeholder="Add a step…"/>
+              <button class="subtask-add-btn" id="subtaskAddBtn"><i class="fas fa-plus"></i></button>
+            </div>
+            <div class="subtask-list" id="subtaskList"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="mf-cancel" id="taskModalCancel">Cancel</button>
+        <button class="mf-save" id="taskModalSave">🌸 Save Task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== EVENT MODAL ===== -->
+  <div class="modal-overlay" id="eventModal">
+    <div class="modal-card modal-card--sm">
+      <button class="modal-close" id="eventModalClose"><i class="fas fa-times"></i></button>
+      <h2 class="modal-title">Add to Calendar</h2>
+      <div class="modal-form">
+        <div class="mf-row">
+          <div class="mf-field mf-full">
+            <label class="mf-label">Event</label>
+            <input type="text" class="mf-input" id="evTitle" placeholder="Event name…"/>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field">
+            <label class="mf-label">Date</label>
+            <input type="date" class="mf-input" id="evDate"/>
+          </div>
+          <div class="mf-field">
+            <label class="mf-label">Time</label>
+            <input type="time" class="mf-input" id="evTime"/>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field mf-full">
+            <label class="mf-label">Color</label>
+            <div class="color-row" id="colorRow">
+              <button class="color-dot active" data-c="#f9a8d4" style="background:#f9a8d4"></button>
+              <button class="color-dot" data-c="#86efac" style="background:#86efac"></button>
+              <button class="color-dot" data-c="#93c5fd" style="background:#93c5fd"></button>
+              <button class="color-dot" data-c="#fde68a" style="background:#fde68a"></button>
+              <button class="color-dot" data-c="#c4b5fd" style="background:#c4b5fd"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="mf-cancel" id="eventModalCancel">Cancel</button>
+        <button class="mf-save" id="eventModalSave">🌿 Add Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== REMINDER MODAL ===== -->
+  <div class="modal-overlay" id="reminderModal">
+    <div class="modal-card modal-card--sm">
+      <button class="modal-close" id="remModalClose"><i class="fas fa-times"></i></button>
+      <h2 class="modal-title">New Reminder</h2>
+      <div class="modal-form">
+        <div class="mf-row">
+          <div class="mf-field mf-full">
+            <label class="mf-label">Note</label>
+            <input type="text" class="mf-input" id="remText" placeholder="Remind me to…"/>
+          </div>
+        </div>
+        <div class="mf-row">
+          <div class="mf-field">
+            <label class="mf-label">Date</label>
+            <input type="date" class="mf-input" id="remDate"/>
+          </div>
+          <div class="mf-field">
+            <label class="mf-label">Time</label>
+            <input type="time" class="mf-input" id="remTime"/>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="mf-cancel" id="remModalCancel">Cancel</button>
+        <button class="mf-save" id="remModalSave">🌸 Set Reminder</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
